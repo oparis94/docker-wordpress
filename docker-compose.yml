@@ -1,0 +1,59 @@
+version: "3"
+#--------Tạo 3 dịch vụ---------------------
+services: 
+  #---Tạo dịch vụ tên là "mariabd-service"-----------
+  mariadb-service:
+    #---Pull image "mariadb" bản mới nhất từ docer hub hoặc từ máy host (nếu đã có sẵn)
+    image: mariadb:latest
+    #---Đặt tên cho container là "maridb-container"---------
+    container_name: maridb-container
+    #---Map thư mục "database" của máy host vào thư mục "/var/lib/mysql" của container để khi stop container thì database không bị mất---------
+    volumes: 
+      - "./database:/var/lib/mysql"
+    #---Gán giá trị cho các biên môi trường-----------
+    environment: 
+      - MYSQL_ROOT_PASSWORD=Mymariadb@123
+      - MYSQL_DATABASE=wp-db
+      - MYSQL_USER=wpuser
+      - MYSQL_PASSWORD=wp123456
+    restart: always
+
+
+  #---Tạo dịch vụ tên là "wordpress-php-service"-----------
+  wordpress-php-service:
+    #---Pull image "wordpress" bản "php7.3-fpm-alpine" từ docer hub hoặc từ máy host (nếu đã có sẵn)
+    image: wordpress:php7.3-fpm-alpine
+    #---Đặt tên cho container là "wordpress-php-container"---------
+    container_name: wordpress-php-container
+    #---Map thư mục "html" của máy host vào thư mục "/var/www/html" của container để khi stop container thì dữ liệu web không bị mất---------
+    volumes: 
+      - "./html:/var/www/html"
+    #---Gán giá trị cho các biên môi trường-----------
+    environment:
+      - WORDPRESS_DB_HOST=mariadb-service
+      - WORDPRESS_DB_NAME=wp-db
+      - WORDPRESS_DB_USER=wpuser
+      - WORDPRESS_DB_PASSWORD=wp123456
+    depends_on: 
+      - mariadb-service
+    restart: always
+  
+  #---Tạo dịch vụ tên là "nginx-service"-----------
+  nginx-service:
+    #---Pull image "nginx" bản "alpine" từ docer hub hoặc từ máy host (nếu đã có sẵn)
+    image: nginx:alpine
+    #---Đặt tên cho container là "nginx-container"---------
+    container_name: nginx-container
+    volumes: 
+      #---Map thư mục "nginx-custom-config" có chứa file .conf (nginx.conf) tạo sẵn từ máy host vào trong thư mục "/etc/nginx/conf.d" của
+      # container nginx để tùy chỉnh cấu hình nginx.
+      - "./nginx-custom-config:/etc/nginx/conf.d"
+      #---Map thư mục "html" trên máy host có chứa src code wordpress vào trong thư mục "/var/www/html" của container nginx
+      - "./html:/var/www/html"
+    # Map port 80 từ container ra port 8080 của máy host
+    ports: 
+      - "8080:80"
+    depends_on: 
+      - mariadb-service
+      - wordpress-php-service
+    restart: always
